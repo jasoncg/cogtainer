@@ -201,10 +201,8 @@ impl ContainerFooter {
     /// Adds the block to the empty space list.
     /// Note: Does not defragment or shrink the file.
     /// Note: Does not flush/write to disk.
-    pub fn delete_block<W: std::io::Write + std::io::Seek>(
+    pub fn delete_block(
         &mut self,
-        writer: &mut W,
-        header: &mut ContainerHeader,
         identifier: &Identifier,
     ) -> Result<BlockDescriptor, CogtainerError> {
         if let Some(descriptor) = self.blocks.remove(&identifier) {
@@ -264,7 +262,6 @@ impl ContainerFooter {
     }
     pub fn get_block_metadata<R: std::io::Read + std::io::Seek>(
         &self,
-        reader: &mut R,
         identifier: &Identifier,
     ) -> Option<&rmpv::Value> {
         self.blocks.get(identifier).map(|bd| &bd.metadata)

@@ -112,8 +112,7 @@ impl<F: Seek + Write> Cogtainer<F> {
     /// Delete the specified block.
     /// (Requires a call to flush() to persist changes)
     pub fn delete_block(&mut self, identifier: &Identifier) -> Result<&mut Self, CogtainerError> {
-        self.footer
-            .delete_block(&mut self.file, &mut self.header, identifier)?;
+        self.footer.delete_block(identifier)?;
         Ok(self)
     }
 }

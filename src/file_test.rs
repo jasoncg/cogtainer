@@ -115,7 +115,7 @@ mod tests {
             )
             .unwrap();
         // Remove A (creates a hole)
-        footer.delete_block(&mut file, &mut header, &id1).unwrap();
+        footer.delete_block(&id1).unwrap();
         assert!(footer.empty_space.values().any(|&v| v == 64));
         // Insert a block that fits in the hole
         let id3 = Identifier::String("C".into());
@@ -220,7 +220,7 @@ mod tests {
         // Delete all
         for i in 0..5 {
             let id = Identifier::U64(i);
-            footer.delete_block(&mut file, &mut header, &id).unwrap();
+            footer.delete_block(&id).unwrap();
         }
         // Should be one large empty space
         assert_eq!(footer.empty_space.len(), 1);
@@ -356,7 +356,7 @@ mod tests {
                 &data2,
             )
             .unwrap();
-        footer.delete_block(&mut file, &mut header, &id1).unwrap();
+        footer.delete_block(&id1).unwrap();
         let orig_hole_offset = footer.empty_space.keys().next().copied().unwrap();
         // Insert a smaller block
         let id3 = Identifier::String("block3".into());
@@ -379,12 +379,8 @@ mod tests {
     }
     #[test]
     fn test_delete_nonexistent_block_returns_error() {
-        let (mut file, mut header, mut footer) = open_new_container();
-        let result = footer.delete_block(
-            &mut file,
-            &mut header,
-            &Identifier::String("missing".into()),
-        );
+        let (_file, _header, mut footer) = open_new_container();
+        let result = footer.delete_block(&Identifier::String("missing".into()));
         assert!(matches!(result, Err(CogtainerError::BlockNotFound(_))));
     }
 
@@ -415,7 +411,7 @@ mod tests {
                 )
                 .unwrap();
             if i % 3 == 0 {
-                footer.delete_block(&mut file, &mut header, &id).unwrap();
+                footer.delete_block(&id).unwrap();
             }
         }
         // All non-deleted blocks should be readable and correct
