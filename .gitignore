@@ -1,0 +1,10 @@
+/target
+dist/
+target
+build
+.direnv
+pkg/
+
+
+.devenv
+*.wat
