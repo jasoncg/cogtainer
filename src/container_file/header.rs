@@ -1,10 +1,4 @@
-use std::{
-    collections::{BTreeMap, HashMap, VecDeque},
-    io::{Seek, SeekFrom},
-    ops::{Deref, DerefMut},
-};
-
-use serde::{Deserialize, Serialize};
+use std::io::SeekFrom;
 
 use crate::error::{CogtainerError, HeaderError};
 

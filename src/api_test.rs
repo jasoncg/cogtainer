@@ -2,7 +2,6 @@
 mod tests {
     use crate::{basic_api::*, container_file::*, error::CogtainerError};
 
-    use super::*;
     use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
     fn new_mem_file() -> Cursor<Vec<u8>> {
@@ -31,7 +30,7 @@ mod tests {
         // Now flush, reopen, and verify
         c.flush().unwrap();
         let buf = c.file.into_inner();
-        let mut c2 = Cogtainer::open(Cursor::new(buf)).unwrap();
+        let c2 = Cogtainer::open(Cursor::new(buf)).unwrap();
         assert_eq!(c2.get_container_metadata(), &meta);
     }
 

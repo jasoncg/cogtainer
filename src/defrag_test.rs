@@ -2,8 +2,7 @@
 mod defrag_tests {
     use crate::{basic_api::Cogtainer, container_file::*};
 
-    use super::*;
-    use std::io::{Cursor, Read, Seek, SeekFrom, Write};
+    use std::io::Cursor;
 
     fn open_new_container() -> Cogtainer<Cursor<Vec<u8>>> {
         let file = Cursor::new(vec![0u8; 512 * 1024]);
@@ -266,8 +265,8 @@ mod defrag_tests {
         // Insert 100 blocks with random sizes and data
         for i in 0..100 {
             let id = Identifier::U64(i);
-            let len = rng.gen_range(1..128);
-            let data: Vec<u8> = (0..len).map(|_| rng.gen()).collect();
+            let len = rng.random_range(1..128);
+            let data: Vec<u8> = (0..len).map(|_| rng.random()).collect();
             let meta = rmpv::Value::from(i as i64);
             c.insert_block(&id, meta.clone(), &data).unwrap();
             ids.push((id.clone(), meta, data));

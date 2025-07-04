@@ -1,12 +1,6 @@
-use std::{
-    collections::{BTreeMap, HashMap, VecDeque},
-    io::{Seek, SeekFrom},
-    ops::{Deref, DerefMut},
-};
+use std::ops::{Deref, DerefMut};
 
 use serde::{Deserialize, Serialize};
-
-use crate::error::{CogtainerError, HeaderError};
 
 mod footer;
 mod header;

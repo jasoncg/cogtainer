@@ -1,16 +1,14 @@
 use std::{
     collections::HashMap,
-    io::{Error, Read, Seek, Write},
+    io::{Read, Seek, Write},
 };
 
 use flate2::Compression;
-use rmpv::Value;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
     container_file::{
-        BlockDescriptor, ContainerFooter, ContainerHeader, FileOffset, Identifier,
-        OverallocationPolicy,
+        BlockDescriptor, ContainerFooter, ContainerHeader, Identifier, OverallocationPolicy,
     },
     error::CogtainerError,
 };
@@ -154,7 +152,7 @@ impl<F: Seek + Read + Write> Cogtainer<F> {
             //         return Ok(self);
             //     }
             // };
-            let (empty_offset, empty_len) = match self.footer.empty_space.iter().next() {
+            let (empty_offset, _empty_len) = match self.footer.empty_space.iter().next() {
                 Some(e) => e,
                 None => {
                     // there is no empty space
@@ -192,7 +190,7 @@ impl<F: Seek + Read + Write> Cogtainer<F> {
             }
         }
         // no more blocks after the empty space
-        let (empty_offset, empty_len) = match self.footer.empty_space.first_entry() {
+        let (empty_offset, _empty_len) = match self.footer.empty_space.first_entry() {
             Some(e) => e.remove_entry(),
             None => {
                 // there is no empty space
@@ -221,7 +219,7 @@ impl BlockCompression {
             Self::Gzip(level) => {
                 let mut encoder =
                     flate2::write::GzEncoder::new(Vec::new(), Compression::new(*level));
-                encoder.write(data.as_slice());
+                encoder.write(data.as_slice())?;
 
                 Ok(encoder.finish()?)
             }
@@ -283,7 +281,7 @@ impl<F: Seek + Write> Cogtainer<F> {
     ) -> Result<&mut Self, CogtainerError> {
         let header = BlockHeader {
             compression,
-            metadata: metadata.clone(),
+            metadata,
         };
         let metadata = rmpv::ext::to_value(header)?;
         let data = compression.compress(rmp_serde::to_vec(data)?)?;

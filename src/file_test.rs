@@ -2,7 +2,6 @@
 mod tests {
     use crate::{container_file::*, error::CogtainerError};
 
-    use super::*;
     use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
     fn new_mem_file() -> Cursor<Vec<u8>> {
@@ -133,7 +132,7 @@ mod tests {
             .unwrap();
         // Should create a leftover hole of 4 bytes
         assert!(footer.empty_space.values().any(|&v| v == 4));
-        let (block_metadata, read_back) = footer.get_block(&mut file, &id3).unwrap();
+        let (_block_metadata, read_back) = footer.get_block(&mut file, &id3).unwrap();
         assert_eq!(&read_back, &data_c);
     }
 
@@ -169,7 +168,7 @@ mod tests {
                 &[],
             )
             .unwrap();
-        let (block_metadata, read) = footer.get_block(&mut file, &id).unwrap();
+        let (_block_metadata, read) = footer.get_block(&mut file, &id).unwrap();
         assert_eq!(read.len(), 0);
     }
 
@@ -225,7 +224,7 @@ mod tests {
         }
         // Should be one large empty space
         assert_eq!(footer.empty_space.len(), 1);
-        let (&FileOffset(start), &len) = footer.empty_space.iter().next().unwrap();
+        let (&FileOffset(_start), &len) = footer.empty_space.iter().next().unwrap();
         assert_eq!(len, 40); // 5*8
     }
 
@@ -300,7 +299,7 @@ mod tests {
                 data,
             )
             .unwrap();
-        let (block_metadata, read_back) = footer.get_block(&mut file, &id).unwrap();
+        let (_block_metadata, read_back) = footer.get_block(&mut file, &id).unwrap();
         assert_eq!(&read_back, data);
     }
 
@@ -324,7 +323,7 @@ mod tests {
         }
         // Read all back
         for (id, d) in &data {
-            let (block_metadata, rb) = footer.get_block(&mut file, id).unwrap();
+            let (_block_metadata, rb) = footer.get_block(&mut file, id).unwrap();
             assert_eq!(rb, *d);
         }
     }
@@ -373,7 +372,7 @@ mod tests {
             )
             .unwrap();
         // The leftover hole should now be of size 60 at the expected offset
-        let mut holes: Vec<_> = footer.empty_space.iter().collect();
+        let holes: Vec<_> = footer.empty_space.iter().collect();
         assert!(holes
             .iter()
             .any(|(&off, &len)| off.0 == orig_hole_offset.0 + 40 && len == 60));
@@ -391,7 +390,7 @@ mod tests {
 
     #[test]
     fn test_reserved_fields_nonzero() {
-        let (mut file, mut header, mut footer) = open_new_container();
+        let (mut file, mut header, _footer) = open_new_container();
         header.reserved = [1, 2, 3, 4];
         header.write_to(&mut file).unwrap();
         // Still able to read header/footer after
@@ -423,7 +422,7 @@ mod tests {
         for i in 0..20 {
             let id = Identifier::U64(i);
             if i % 3 != 0 {
-                let (block_metadata, data) = footer.get_block(&mut file, &id).unwrap();
+                let (_block_metadata, data) = footer.get_block(&mut file, &id).unwrap();
                 assert_eq!(data, vec![i as u8; 10]);
             }
         }

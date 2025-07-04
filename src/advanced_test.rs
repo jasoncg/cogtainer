@@ -2,8 +2,6 @@
 mod compression_block_tests {
     use crate::{basic_api::*, container_file::*};
 
-    use super::*;
-    use rmpv::Value;
     use std::io::Cursor;
 
     fn open_new_container() -> Cogtainer<Cursor<Vec<u8>>> {
@@ -43,7 +41,7 @@ mod compression_block_tests {
     #[test]
     fn block_compression_roundtrips_various_levels() {
         let mut c = open_new_container();
-        let id = Identifier::String("multi-level".into());
+        let _id = Identifier::String("multi-level".into());
         let meta = "gzip-multilevel".to_string();
         let data = b"The quick brown fox jumps over the lazy dog. ".repeat(64);
 
@@ -88,19 +86,19 @@ mod compression_block_tests {
         // Write compressed
         c.insert_block_as(&id, BlockCompression::Gzip(1), &meta, &data1)
             .unwrap();
-        let (header, actual): (String, Vec<u8>) = c.get_as(&id).unwrap();
+        let (_header, actual): (String, Vec<u8>) = c.get_as(&id).unwrap();
         assert_eq!(actual, data1);
 
         // Overwrite with uncompressed
         c.insert_block_as(&id, BlockCompression::None, &meta, &data2)
             .unwrap();
-        let (header, actual): (String, Vec<u8>) = c.get_as(&id).unwrap();
+        let (_header, actual): (String, Vec<u8>) = c.get_as(&id).unwrap();
         assert_eq!(actual, data2);
 
         // And back to compressed
         c.insert_block_as(&id, BlockCompression::Gzip(9), &meta, &data1)
             .unwrap();
-        let (header, actual): (String, Vec<u8>) = c.get_as(&id).unwrap();
+        let (_header, actual): (String, Vec<u8>) = c.get_as(&id).unwrap();
         assert_eq!(actual, data1);
     }
 
@@ -119,7 +117,7 @@ mod compression_block_tests {
         let offset = block_desc.file_offset.0;
         let len = block_desc.used_length as usize;
 
-        let mut file = c.file.get_mut();
+        let file = c.file.get_mut();
         file[offset as usize..offset as usize + len]
             .iter_mut()
             .for_each(|b| *b = 0xFF);

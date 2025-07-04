@@ -1,12 +1,11 @@
 use std::{
-    collections::{BTreeMap, HashMap, VecDeque},
-    io::{Seek, SeekFrom},
-    ops::{Deref, DerefMut},
+    collections::{BTreeMap, HashMap},
+    io::SeekFrom,
 };
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::{CogtainerError, HeaderError};
+use crate::error::CogtainerError;
 
 use super::*;
 
@@ -227,7 +226,7 @@ impl ContainerFooter {
         let mut iter = empty.into_iter().peekable();
 
         while let Some((offset, len)) = iter.next() {
-            let mut current_offset = offset;
+            let current_offset = offset;
             let mut current_len = len;
 
             while let Some(&(next_offset, next_len)) = iter.peek() {
