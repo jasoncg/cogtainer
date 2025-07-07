@@ -11,6 +11,7 @@ use crate::{
         BlockDescriptor, ContainerFooter, ContainerHeader, Identifier, OverallocationPolicy,
     },
     error::CogtainerError,
+    traits::Truncate,
 };
 
 pub struct Cogtainer<F> {
@@ -113,6 +114,18 @@ impl<F: Seek + Write> Cogtainer<F> {
     /// (Requires a call to flush() to persist changes)
     pub fn delete_block(&mut self, identifier: &Identifier) -> Result<&mut Self, CogtainerError> {
         self.footer.delete_block(identifier)?;
+        Ok(self)
+    }
+}
+impl<F: Seek + Read + Write + Truncate> Cogtainer<F> {
+    pub fn defragment_then_truncate(&mut self) -> Result<&mut Self, CogtainerError> {
+        self.defragment()?;
+        let length = self.file_length();
+        if let Err(_err) = self.file.truncate(length) {
+            return Err(CogtainerError::IOError(std::io::Error::other(
+                "Unable to truncate file",
+            )));
+        }
         Ok(self)
     }
 }

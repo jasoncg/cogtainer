@@ -1,6 +1,7 @@
 pub mod basic_api;
 pub mod container_file;
 pub mod error;
+pub mod traits;
 //pub mod power_api;
 //pub mod worksheet_file;
 
