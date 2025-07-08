@@ -19,7 +19,7 @@ pub struct BlockDescriptor {
 }
 
 /// Maintains the metadata and overall structure of the file. This includes occupied blocks and empty space.
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ContainerFooter {
     /// Domain-specific information relevant for this file.
     pub metadata: rmpv::Value,

@@ -14,6 +14,7 @@ use crate::{
     traits::Truncate,
 };
 
+#[derive(Debug)]
 pub struct Cogtainer<F> {
     pub(crate) file: F,
     pub(crate) header: ContainerHeader,
