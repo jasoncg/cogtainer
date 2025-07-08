@@ -21,6 +21,12 @@ pub struct Cogtainer<F> {
 
     pub(crate) overallocation_policy: OverallocationPolicy,
 }
+//#[cfg(test)]
+impl<F> Cogtainer<F> {
+    pub fn get_inner_file(&mut self) -> &mut F {
+        &mut self.file
+    }
+}
 
 impl<F: Seek + Read> Cogtainer<F> {
     pub fn open(mut file: F) -> Result<Self, CogtainerError> {
@@ -282,6 +288,10 @@ impl<F: Seek + Read> Cogtainer<F> {
 }
 #[cfg(feature = "full")]
 impl<F: Seek + Write> Cogtainer<F> {
+    pub fn set_metadata_as<T: Serialize>(&mut self, meta: &T) -> Result<&mut Self, CogtainerError> {
+        let meta = rmpv::ext::to_value(meta)?;
+        self.set_metadata(meta)
+    }
     /// Inserts a block with the given unique identifier.
     /// If a block already exists with the given identifier, it will be replaced.
     pub fn insert_block_as<M: Serialize, D: Serialize>(
