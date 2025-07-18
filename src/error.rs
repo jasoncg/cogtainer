@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use crate::container_file::Identifier;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum HeaderError {
     Magic,
     Version,

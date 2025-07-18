@@ -52,12 +52,37 @@ fn calc_checksum(bytes: &[u8]) -> Checksum {
 /// Unique identifier for a block.
 /// This could take on the form of a file path, or some domain-relevant id.
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[serde(untagged)]
+//#[serde(untagged)]
 pub enum Identifier {
     String(String),
     U64(u64),
     Bytes(Vec<u8>),
     Path(Vec<Self>),
+}
+impl From<String> for Identifier {
+    fn from(value: String) -> Self {
+        Self::String(value)
+    }
+}
+impl From<u64> for Identifier {
+    fn from(value: u64) -> Self {
+        Self::U64(value)
+    }
+}
+impl From<usize> for Identifier {
+    fn from(value: usize) -> Self {
+        Self::U64(value as u64)
+    }
+}
+impl From<Vec<u8>> for Identifier {
+    fn from(value: Vec<u8>) -> Self {
+        Self::Bytes(value)
+    }
+}
+impl From<Vec<Self>> for Identifier {
+    fn from(value: Vec<Self>) -> Self {
+        Self::Path(value)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
