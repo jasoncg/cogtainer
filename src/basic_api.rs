@@ -279,10 +279,20 @@ impl<F: Seek + Read> Cogtainer<F> {
         &mut self,
         identifier: &Identifier,
     ) -> Result<(M, D), CogtainerError> {
+        let (meta, data) = self.get_as_raw(identifier)?;
+
+        let data = rmp_serde::from_slice(data.as_slice())?;
+
+        Ok((meta, data))
+    }
+    pub fn get_as_raw<M: DeserializeOwned>(
+        &mut self,
+        identifier: &Identifier,
+    ) -> Result<(M, Vec<u8>), CogtainerError> {
         let (metadata, data) = self.get_block(identifier)?;
 
         let header: BlockHeader<M> = rmpv::ext::from_value(metadata.clone())?;
-        let data = rmp_serde::from_slice(header.compression.decompress(data)?.as_slice())?;
+        let data = header.compression.decompress(data)?;
 
         Ok((header.metadata, data))
     }
