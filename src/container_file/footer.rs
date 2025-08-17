@@ -197,7 +197,6 @@ impl ContainerFooter {
         self.write_to(writer, header)
     }
 
-<<<<<<< HEAD
     /// Adds the given block (or replaces it if it already exists).
     pub fn insert_block_at<W: std::io::Write + std::io::Seek>(
         &mut self,
@@ -349,8 +348,6 @@ impl ContainerFooter {
         self.write_to(file, header)?;
         Ok(allocated_length)
     }
-=======
->>>>>>> main
     /// Deletes the specified block. Returns an error if the block doesn't exist.
     /// Adds the block to the empty space list.
     /// Note: Does not defragment or shrink the file.
@@ -448,7 +445,7 @@ impl ContainerFooter {
 
         Ok((&descriptor.metadata, bytes))
     }
-<<<<<<< HEAD
+
     pub fn get_block_slice<R: std::io::Read + std::io::Seek>(
         &self,
         reader: &mut R,
@@ -483,6 +480,4 @@ impl ContainerFooter {
 
         Ok(read_length)
     }
-=======
->>>>>>> main
 }
