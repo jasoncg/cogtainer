@@ -197,6 +197,157 @@ impl ContainerFooter {
         self.write_to(writer, header)
     }
 
+    /// Adds the given block (or replaces it if it already exists).
+    pub fn insert_block_at<W: std::io::Write + std::io::Seek>(
+        &mut self,
+        writer: &mut W,
+        header: &mut ContainerHeader,
+        policy: OverallocationPolicy,
+        identifier: &Identifier,
+        offset: u64,
+        data: &[u8],
+    ) -> Result<usize, CogtainerError> {
+        let checksum = calc_checksum(data);
+        let mut old_used_size = 0;
+
+        let mut metadata = rmpv::Value::Nil;
+
+        // always remove the old block. This gives the opportunity to consolidate empty space and simplifies the overall logic in this section.
+        if let Some(descriptor) = self.blocks.remove(identifier) {
+            if descriptor.allocated_length > 0 {
+                self.empty_space
+                    .insert(descriptor.file_offset, descriptor.allocated_length);
+                self.consolidate_empty_space();
+            }
+            old_used_size = descriptor.used_length;
+            metadata = descriptor.metadata.clone();
+        }
+        let new_used_size = offset + data.len() as u64;
+        let new_used_size = old_used_size.max(new_used_size);
+
+        // write the data
+        if new_used_size > 0 {
+            // find new empty space
+            let (insert_file_offset, allocated_length) =
+                self.reserve_space(header, new_used_size, policy);
+
+            // update the footer with the new offset/metadata
+            self.blocks.insert(
+                identifier.clone(),
+                BlockDescriptor {
+                    file_offset: insert_file_offset,
+                    used_length: new_used_size,
+                    allocated_length,
+                    checksum,
+                    metadata,
+                },
+            );
+
+            writer.seek(SeekFrom::Start(insert_file_offset.0 + offset))?;
+            writer.write_all(data)?;
+
+            // fill remaining space with zeros
+            if new_used_size < allocated_length {
+                let zeros = vec![0u8; (allocated_length - new_used_size) as usize];
+                writer.write_all(&zeros)?;
+            }
+        } else {
+            // no data block
+            self.blocks.insert(
+                identifier.clone(),
+                BlockDescriptor {
+                    file_offset: FileOffset(0),
+                    used_length: 0,
+                    allocated_length: 0,
+                    checksum,
+                    metadata,
+                },
+            );
+        }
+        // write the footer (which also writes the header)
+        self.write_to(writer, header)?;
+        Ok(data.len())
+    }
+    /// Resizes the block to at least the minimum size.
+    /// Does not shrink the block.
+    /// Based on OverallocationPolicy, might make the block larger than requested.
+    /// If the block is already at least minimum_size, might not grow the block at all.
+    ///
+    /// Returns the new size of the block.
+    pub fn grow_block<W: std::io::Read + std::io::Write + std::io::Seek>(
+        &mut self,
+        file: &mut W,
+        header: &mut ContainerHeader,
+        policy: OverallocationPolicy,
+        identifier: &Identifier,
+        minimum_size: u64,
+    ) -> Result<u64, CogtainerError> {
+        let minimum_size = policy.calculate(minimum_size);
+
+        if let Some(block) = self.blocks.get(identifier) {
+            if block.allocated_length >= minimum_size {
+                return Ok(block.allocated_length);
+            }
+        }
+
+        let (metadata, data) = match self.get_block(file, identifier) {
+            Ok(data) => (data.0.clone(), data.1),
+            Err(_) => (rmpv::Value::Nil, vec![]),
+        };
+
+        let checksum = calc_checksum(data.as_slice());
+
+        // always remove the old block. This gives the opportunity to consolidate empty space and simplifies the overall logic in this section.
+        if let Some(descriptor) = self.blocks.remove(identifier) {
+            if descriptor.allocated_length > 0 {
+                self.empty_space
+                    .insert(descriptor.file_offset, descriptor.allocated_length);
+                self.consolidate_empty_space();
+            }
+        }
+
+        // find new empty space
+        let (insert_file_offset, allocated_length) =
+            self.reserve_space(header, minimum_size, OverallocationPolicy::None);
+
+        // write the data
+        if data.len() > 0 {
+            // update the footer with the new offset/metadata
+            self.blocks.insert(
+                identifier.clone(),
+                BlockDescriptor {
+                    file_offset: insert_file_offset,
+                    used_length: data.len() as u64,
+                    allocated_length,
+                    checksum,
+                    metadata,
+                },
+            );
+
+            file.seek(SeekFrom::Start(insert_file_offset.0))?;
+            file.write_all(&data)?;
+        } else {
+            // no data block
+            self.blocks.insert(
+                identifier.clone(),
+                BlockDescriptor {
+                    file_offset: insert_file_offset,
+                    used_length: 0,
+                    allocated_length,
+                    checksum,
+                    metadata,
+                },
+            );
+        }
+        // fill remaining space with zeros
+        if data.len() < allocated_length as usize {
+            let zeros = vec![0u8; allocated_length as usize - data.len()];
+            file.write_all(&zeros)?;
+        }
+        // write the footer (which also writes the header)
+        self.write_to(file, header)?;
+        Ok(allocated_length)
+    }
     /// Deletes the specified block. Returns an error if the block doesn't exist.
     /// Adds the block to the empty space list.
     /// Note: Does not defragment or shrink the file.
@@ -293,5 +444,40 @@ impl ContainerFooter {
         }
 
         Ok((&descriptor.metadata, bytes))
+    }
+
+    pub fn get_block_slice<R: std::io::Read + std::io::Seek>(
+        &self,
+        reader: &mut R,
+        identifier: &Identifier,
+        start: u64,
+        buf: &mut [u8],
+    ) -> Result<u64, CogtainerError> {
+        let descriptor = self
+            .blocks
+            .get(identifier)
+            .ok_or_else(|| CogtainerError::BlockNotFound(identifier.clone()))?;
+
+        //buf.fill(0);
+        // there is no block data
+        if descriptor.allocated_length == 0 {
+            return Ok(0);
+        }
+        if start >= descriptor.used_length {
+            return Ok(0);
+            // return Err(CogtainerError::IOError(std::io::Error::new(
+            //     std::io::ErrorKind::InvalidInput,
+            //     "Start Position is out of bounds",
+            // )));
+        }
+        reader.seek(SeekFrom::Start(descriptor.file_offset.0 + start))?;
+
+        //let mut bytes = vec![0u8; descriptor.used_length as usize];
+        let read_length = descriptor.used_length - start;
+        let read_length = read_length.min(buf.len() as u64);
+
+        reader.read_exact(&mut buf[..read_length as usize])?;
+
+        Ok(read_length)
     }
 }

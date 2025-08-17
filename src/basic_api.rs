@@ -11,6 +11,7 @@ use crate::{
         BlockDescriptor, ContainerFooter, ContainerHeader, Identifier, OverallocationPolicy,
     },
     error::CogtainerError,
+    internal_file::InternalFile,
     traits::Truncate,
 };
 
@@ -117,6 +118,23 @@ impl<F: Seek + Write> Cogtainer<F> {
         )?;
         Ok(self)
     }
+
+    /// Adds the given block (or replaces it if it already exists).
+    pub(crate) fn insert_block_at(
+        &mut self,
+        identifier: &Identifier,
+        offset: u64,
+        data: &[u8],
+    ) -> Result<usize, CogtainerError> {
+        self.footer.insert_block_at(
+            &mut self.file,
+            &mut self.header,
+            self.overallocation_policy,
+            identifier,
+            offset,
+            data,
+        )
+    }
     /// Delete the specified block.
     /// (Requires a call to flush() to persist changes)
     pub fn delete_block(&mut self, identifier: &Identifier) -> Result<&mut Self, CogtainerError> {
@@ -222,6 +240,11 @@ impl<F: Seek + Read + Write> Cogtainer<F> {
         self.footer.write_to(&mut self.file, &mut self.header)?;
 
         Ok(self)
+    }
+
+    /// Gets an internal block as if it were a file
+    pub fn get_block_as_file(&mut self, identifier: &Identifier) -> InternalFile<F> {
+        InternalFile::new(self, identifier.clone())
     }
 }
 
